@@ -11,10 +11,10 @@
 # email : marcelo.palacios@mv.com.br
 #-----------------------------------------------------------------------------------------
 ##======== sources ==============##
-source toolserver/menu.conf 
-source toolserver/menu-tomcat.txt
-BANCO="toolserver/db-clientes.txt"
-LISTCL="toolserver/clientes.txt"
+source conf-toolserver/menu.conf 
+source conf-toolserver/menu-tomcat.txt
+BANCO="conf-toolserver/db-clientes.txt"
+LISTCL="conf-toolserver/clientes.txt"
 SEMTOMCAT="\e[1;35m Esse servidor não contem Tomcats \e[0m"
 NOLINUX="\e[1;35m Esse servidor e Windows! \e[0m"
 OPTION=0
@@ -97,7 +97,7 @@ while [ $OPTION -ne 9 ]; do
 				echo "     [ 6 ]  Pacotes";
 				echo "     ------------------------------------------"
 				#teste
-				read -p "Digite a opção desejada " OPCAO;
+				read -p $'\033[32;1mDigite a opção desejada : \033[m' OPCAO
 				#fim menu
 				if [ $OPCAO == "1" ]
 				then
@@ -106,121 +106,184 @@ while [ $OPTION -ne 9 ]; do
 					$CONECTA
 				elif [ $OPCAO == "2" ]
 				then
-					echo -e "      \e[1;32m Download Logs e mv-logs \e[0m";
+					############### ADD  LOGS INDIVIDUAL ###############
+					clear
+					echo "                        MENU"
+					echo "     ------------------------------------------"
+					echo "     [ 1 ]  logs data atual";
+					echo "     [ 2 ]  mv-logs data atual"
+					echo "     [ 3 ]  Download das pastas logs e mv-logs";
+					echo "     ------------------------------------------"
+
+					read -p $'\033[32;1mDigite a opção desejada : \033[m' LOG_OPCAO;
+
+					if [ $LOG_OPCAO == "1" ]
+					then
+						echo -e "      \e[1;32m Download Logs e mv-logs \e[0m";
+						$PRINTPASS
+						$CONECTA 'export AMBIENTE='$AMB '; tomcatctl contexto';
+						echo -e "\n";
+						read -p $'\033[32;1mInforme numero de tomcat : \033[m' TOMCAT
+						for i in `ssh $USER@$SERVER find "/MV/servers/soulmv_$AMB/tomcat$TOMCAT/logs" -type f -mtime 0`
+							#echo "arquivos do for : $i"
+						do
+
+							echo  $i | cut -d '/' -f7;  
+							read -p $'\033[32;1mDownload ? (y/n) : \033[m' download
+							if [[ "$download" = "y" ]]
+							then
+								scp $USER@$SERVER:/$i /home/$USUARIO/logs/$CLIENTE/
+							fi
+						done
+
+
+
+
+
+
+					elif [ $LOG_OPCAO == "2" ]
+					then
+						echo -e "      \e[1;32m Download Logs e mv-logs \e[0m";
+						$PRINTPASS
+						$CONECTA 'export AMBIENTE='$AMB '; tomcatctl contexto';
+						echo -e "\n";
+						read -p $'\033[32;1mInforme numero de tomcat : \033[m' TOMCAT
+						for i in `ssh $USER@$SERVER find "/MV/servers/soulmv_$AMB/tomcat$TOMCAT/mv-logs" -type f -mtime 0`
+							#echo "arquivos do for : $i"
+						do
+
+							echo  $i | cut -d '/' -f7;
+							read -p $'\033[32;1mDownload ? (y/n) : \033[m' download
+							if [[ "$download" = "y" ]]
+							then
+								scp $USER@$SERVER:/$i /home/$USUARIO/logs/$CLIENTE/
+							fi
+						done
+
+					elif [ $LOG_OPCAO == "3" ]
+					then
+						echo -e "      \e[1;32m Download Logs e mv-logs \e[0m";
+						$PRINTPASS
+						$CONECTA 'export AMBIENTE='$AMB '; tomcatctl contexto';
+						echo -e "\n";
+						read -p "informe numero de tomcat :" TOMCAT
+						#download de log  e mv-logs
+						scp -r -C $USER@$SERVER:/MV/servers/soulmv_$AMB/tomcat$TOMCAT/logs/ /home/$USUARIO/logs/$CLIENTE-$AMB-Tomcat$TOMCAT-logs-$(date +"%Y_%m_%d")/;scp -r -C $USER@$SERVER:/MV/servers/soulmv_$AMB/tomcat$TOMCAT/mv-logs/ /home/$USUARIO/logs/$CLIENTE-$AMB-Tomcat$TOMCAT-mvlogs-$(date +"%Y_%m_%d")/
+					fi
+
+
+				
+
+				################ FIM LOG INDIVIDUAL ################ 
+
+			elif [ $OPCAO == "3" ]
+			then
+				echo -e "      \e[1;32m Status Servidor e Tomcat \e[0m";
+				$PRINTPASS
+				$CONECTA  'echo -e "\n"; free -h ;echo -e "\n"; df -h' ';echo -e "\n"; export AMBIENTE='$AMB '; tomcatctl contexto; ' ;
+				##============ MENU REINCIO TOMCAT ===============================##
+			elif [ $OPCAO == "4" ]
+			then
+				clear
+				menu-tomcat
+				read -p "Digite a opção desejada : " REINICIA ;
+				if [ $REINICIA == "1" ]
+				then 
+					$PRINTPASS
+					$CONECTA 'tomcatctl restart all' ;
+				elif [ $REINICIA == "2" ]
+				then
 					$PRINTPASS
 					$CONECTA 'export AMBIENTE='$AMB '; tomcatctl contexto';
-					echo -e "\n";
-					read -p "informe numero de tomcat :" TOMCAT
-					#download de log  e mv-logs
-					scp -r -C $USER@$SERVER:/MV/servers/soulmv_$AMB/tomcat$TOMCAT/logs/ /home/$USUARIO/logs/$CLIENTE-$AMB-Tomcat$TOMCAT-logs-$(date +"%Y_%m_%d")/;scp -r -C $USER@$SERVER:/MV/servers/soulmv_$AMB/tomcat$TOMCAT/mv-logs/ /home/$USUARIO/logs/$CLIENTE-$AMB-Tomcat$TOMCAT-mvlogs-$(date +"%Y_%m_%d")/
-				elif [ $OPCAO == "3" ]
+					read -p "Informe o Tomcat para reinicio :" NUMTOM 
+					$CONECTA 'tomcatctl restart' $NUMTOM ;
+				elif [ $REINICIA == "3" ]
 				then
-					echo -e "      \e[1;32m Status Servidor e Tomcat \e[0m";
 					$PRINTPASS
-					$CONECTA  'echo -e "\n"; free -h ;echo -e "\n"; df -h' ';echo -e "\n"; export AMBIENTE='$AMB '; tomcatctl contexto; ' ;
-					##============ MENU REINCIO TOMCAT ===============================##
-				elif [ $OPCAO == "4" ]
+					$CONECTA 'tomcatctl stop all; tomcatctl cleanup all; tomcatctl start all'
+				elif [ $REINICIA == "4" ]
+				then
+					$PRINTPASS
+					$CONECTA 'export AMBIENTE='$AMB '; tomcatctl contexto';
+					read -p "Informe o Tomcat para reinicio :" NUMTOM
+					$CONECTA 'tomcatctl stop '$NUMTOM';tomcatctl cleanup '$NUMTOM';tomcatctl start '$NUMTOM;	
+				elif [ $REINICIA == "5" ]
+				then
+					$PRINTPASS
+					$CONECTA 'tomcatctl stop all'
+				elif [ $REINICIA == "6" ]
+				then
+					$PRINTPASS
+					$CONECTA 'export AMBIENTE='$AMB' ; tomcatctl contexto';
+					read -p "Informe o Tomcat para PARAR : " NUMTOM
+					$CONECTA 'tomcatctl stop '$NUMTOM;
+				elif [ $REINICIA == "7" ]
+				then
+					$PRINTPASS
+					$CONECTA 'echo 3 > /proc/sys/vm/drop_caches ; sysctl -w vm.drop_caches=3';
+				else
+					echo "Esolha opção de 1 a 7"; 
+				fi
+				##============ FIM MENU REINICIO TOMCAT =========================##
+			elif [ $OPCAO == "5" ]
+			then
+				$PRINTPASS
+				$CONECTA 'echo -e "\nSOUL : " ;
+				ls -t  /MV/apps/soulmv_'$AMB'/products/mv/ | tail -n  +1 | head -1  ;
+				echo "PEP : " ;
+				ls -t /MV/apps/soulmv_'$AMB'/products/mvpep/ | tail -n +1 | head -1 ;
+				echo "LICENSE : " ;
+				ls -t /MV/apps/soulmv_'$AMB'/products/license-service/ | tail -n +1 | head -1 ;'
+				if [ $OPCAO == "6" ]
 				then
 					clear
-					menu-tomcat
-					read -p "Digite a opção desejada : " REINICIA ;
-					if [ $REINICIA == "1" ]
-					then 
-						$PRINTPASS
-						$CONECTA 'tomcatctl restart all' ;
-					elif [ $REINICIA == "2" ]
+					echo "                        MENU"
+					echo "     ------------------------------------------"
+					echo "     [ 1 ]  Download arquivo cliente - HTML";
+					echo "     [ 2 ]  Download arquivo cliente - FLEX";
+					echo "     [ 3 ]  Subir aquivo modificado - HTML";
+					echo "     [ 4 ]  Subir arquivo modificado - FLEX";
+					echo "     ------------------------------------------";
+					read -p "Digite a opção desejada : " PACOTE ;
+					if [ $PACOTE == "1" ]
 					then
 						$PRINTPASS
-						$CONECTA 'export AMBIENTE='$AMB '; tomcatctl contexto';
-						read -p "Informe o Tomcat para reinicio :" NUMTOM 
-						$CONECTA 'tomcatctl restart' $NUMTOM ;
-					elif [ $REINICIA == "3" ]
+						$CONECTA "ls -t /MV/apps/soulmv_'$AMB'/products/soul-product-forms/" ;
+						read -p "Escolha a  versão : "  VERSAO;
+						read -p "Escreva o produto ex: ffcv : " PRDT;
+						scp -r $USER@$SERVER:/MV/apps/soulmv_$AMB/products/soul-product-forms/$VERSAO/forms/WEB-INF/lib/soul-${PRDT,,}-forms-$VERSAO.jar /home/marcelopalacios/
+					elif [ $PACOTE == "2" ]
 					then
 						$PRINTPASS
-						$CONECTA 'tomcatctl stop all; tomcatctl cleanup all; tomcatctl start all'
-					elif [ $REINICIA == "4" ]
+						$CONECTA "ls -t /MV/apps/soulmv_'$AMB'/products/mv/" ;
+						read -p "Escolha a  versão : "  VERSAO;
+						read -p "Escreva o produto ex: ffcv : " PRDT;
+						read -p "Escreva o nome da tela (Camel Case) : " TELA
+						scp -r $USER@$SERVER:/MV/apps/soulmv_$AMB/products/'mv'/$VERSAO/forms/WEB-INF/lib/com.mvsistemas.mv2000.${PRDT,,}.forms.$TELA.jar /home/marcelopalacios/
+					elif [ $PACOTE == "3" ]
 					then
+						ls -l soul-*;
+						read -p "Copie e cole o nome do arquivo : " ARQUIVO
 						$PRINTPASS
-						$CONECTA 'export AMBIENTE='$AMB '; tomcatctl contexto';
-						read -p "Informe o Tomcat para reinicio :" NUMTOM
-						$CONECTA 'tomcatctl stop '$NUMTOM';tomcatctl cleanup '$NUMTOM';tomcatctl start '$NUMTOM;	
-					elif [ $REINICIA == "5" ]
+						$CONECTA "ls -t /MV/apps/soulmv_'$AMB'/products/soul-product-forms/" ;
+						read -p "Escolha a  versão : "  VERSAO;
+						scp -r /home/marcelopalacios/$ARQUIVO $USER@$SERVER:/MV/apps/soulmv_$AMB/products/soul-product-forms/$VERSAO/forms/WEB-INF/lib/
+					elif [ $PACOTE == "4" ]
 					then
+						ls -l com.mvsistemas.mv2000.*;
+						read -p "Copie e cole o nome do arquivo : " ARQUIVO
 						$PRINTPASS
-						$CONECTA 'tomcatctl stop all'
-					elif [ $REINICIA == "6" ]
-					then
-						$PRINTPASS
-						$CONECTA 'export AMBIENTE='$AMB' ; tomcatctl contexto';
-						read -p "Informe o Tomcat para PARAR : " NUMTOM
-						$CONECTA 'tomcatctl stop '$NUMTOM;
-					elif [ $REINICIA == "7" ]
-					then
-						$PRINTPASS
-						$CONECTA 'echo 3 > /proc/sys/vm/drop_caches ; sysctl -w vm.drop_caches=3';
+						$CONECTA "ls -t /MV/apps/soulmv_'$AMB'/products/mv/" ;
+						read -p "Escolha a  versão : "  VERSAO;
+						scp -r /home/marcelopalacios/$ARQUIVO $USER@$SERVER:/MV/apps/soulmv_$AMB/products/'mv'/$VERSAO/forms/WEB-INF/lib/
 					else
-						echo "Esolha opção de 1 a 7"; 
+						echo "Opção não existe"
 					fi
-					##============ FIM MENU REINICIO TOMCAT =========================##
-				elif [ $OPCAO == "5" ]
-				then
-					$PRINTPASS
-					$CONECTA 'echo -e "\nSOUL : " ;
-					ls -t  /MV/apps/soulmv_'$AMB'/products/mv/ | tail -n  +1 | head -1  ;
-					echo "PEP : " ;
-					ls -t /MV/apps/soulmv_'$AMB'/products/mvpep/ | tail -n +1 | head -1 ;
-					echo "LICENSE : " ;
-					ls -t /MV/apps/soulmv_'$AMB'/products/license-service/ | tail -n +1 | head -1 ;'
-					if [ $OPCAO == "6" ]
-					then
-						clear
-						echo "                        MENU"
-						echo "     ------------------------------------------"
-						echo "     [ 1 ]  Download arquivo cliente - HTML";
-						echo "     [ 2 ]  Download arquivo cliente - FLEX";
-						echo "     [ 3 ]  Subir aquivo modificado - HTML";
-						echo "     [ 4 ]  Subir arquivo modificado - FLEX";
-						echo "     ------------------------------------------";
-						read -p "Digite a opção desejada : " PACOTE ;
-						if [ $PACOTE == "1" ]
-						then
-							$PRINTPASS
-							$CONECTA "ls -t /MV/apps/soulmv_'$AMB'/products/soul-product-forms/" ;
-							read -p "Escolha a  versão : "  VERSAO;
-							read -p "Escreva o produto ex: ffcv : " PRDT;
-							scp -r $USER@$SERVER:/MV/apps/soulmv_$AMB/products/soul-product-forms/$VERSAO/forms/WEB-INF/lib/soul-${PRDT,,}-forms-$VERSAO.jar /home/marcelopalacios/
-						elif [ $PACOTE == "2" ]
-						then
-							$PRINTPASS
-							$CONECTA "ls -t /MV/apps/soulmv_'$AMB'/products/mv/" ;
-							read -p "Escolha a  versão : "  VERSAO;
-							read -p "Escreva o produto ex: ffcv : " PRDT;
-							read -p "Escreva o nome da tela (Camel Case) : " TELA
-							scp -r $USER@$SERVER:/MV/apps/soulmv_$AMB/products/'mv'/$VERSAO/forms/WEB-INF/lib/com.mvsistemas.mv2000.${PRDT,,}.forms.$TELA.jar /home/marcelopalacios/
-						elif [ $PACOTE == "3" ]
-						then
-							ls -l soul-*;
-							read -p "Copie e cole o nome do arquivo : " ARQUIVO
-							$PRINTPASS
-							$CONECTA "ls -t /MV/apps/soulmv_'$AMB'/products/soul-product-forms/" ;
-							read -p "Escolha a  versão : "  VERSAO;
-							scp -r /home/marcelopalacios/$ARQUIVO $USER@$SERVER:/MV/apps/soulmv_$AMB/products/soul-product-forms/$VERSAO/forms/WEB-INF/lib/
-						elif [ $PACOTE == "4" ]
-						then
-							ls -l com.mvsistemas.mv2000.*;
-							read -p "Copie e cole o nome do arquivo : " ARQUIVO
-							$PRINTPASS
-							$CONECTA "ls -t /MV/apps/soulmv_'$AMB'/products/mv/" ;
-							read -p "Escolha a  versão : "  VERSAO;
-							scp -r /home/marcelopalacios/$ARQUIVO $USER@$SERVER:/MV/apps/soulmv_$AMB/products/'mv'/$VERSAO/forms/WEB-INF/lib/
-						else
-							echo "Opção não existe"
-						fi
 
-					fi
 				fi
 			fi
 		fi
+	fi
 	fi
 	echo "pulse uma tecla para continuar......"
 	read p
